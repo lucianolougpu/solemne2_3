@@ -1,15 +1,313 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <title>FreeworksDashboard</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - FreeWorks</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f7f6; color: #333; }
+        header { background-color: #2c3e50; color: white; padding: 1em; text-align: center; }
+        header h1 { margin: 0; }
+        nav ul { list-style-type: none; padding: 0; margin: 10px 0 0 0; text-align: center; }
+        nav ul li { display: inline; margin-right: 20px; }
+        nav ul li a { color: white; text-decoration: none; font-weight: bold; }
+        .container { padding: 20px; max-width: 1200px; margin: auto; }
+        .filters-search { background-color: #fff; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .filters-search h2 { margin-top: 0; }
+        .filters-search label, .filters-search input, .filters-search select, .filters-search button { margin-right: 10px; margin-bottom: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        .dashboard-summary { background-color: #fff; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .dashboard-summary h2 { margin-top: 0; }
+        .project-tabs { margin-bottom: 20px; border-bottom: 1px solid #ccc; }
+        .project-tabs button { background-color: #ecf0f1; border: none; padding: 10px 15px; cursor: pointer; margin-right: 5px; border-top-left-radius: 4px; border-top-right-radius: 4px; }
+        .project-tabs button.active { background-color: #3498db; color: white; }
+        .project-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .project-card { background-color: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .project-card h3 { margin-top: 0; color: #3498db; }
+        .project-card p { margin: 5px 0; }
+        .project-card .status { font-weight: bold; }
+        .status-en-progreso { color: #f39c12; }
+        .status-finalizado { color: #2ecc71; }
+        .status-atrasado { color: #e74c3c; }
+        .project-card progress { width: 100%; height: 20px; margin-top: 5px; }
+        .project-card .actions button, .project-card .actions select { margin-top: 10px; margin-right: 5px; padding: 6px 10px; }
+        .deliverables h4, .comments h4 { margin-top: 15px; margin-bottom: 5px; color: #555; }
+        .deliverables ul, .comments ul { list-style-type: none; padding-left: 0; }
+        .deliverables li, .comments li { background-color: #f9f9f9; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.9em; }
+        .add-deliverable-form, .add-comment-form { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; }
+        .add-deliverable-form input, .add-deliverable-form textarea, .add-deliverable-form button,
+        .add-comment-form textarea, .add-comment-form button { margin-bottom: 5px; width: calc(100% - 16px); padding: 8px; }
+        .notifications { position: fixed; top: 20px; right: 20px; background-color: #e74c3c; color: white; padding: 10px; border-radius: 5px; z-index: 1000; }
+        .notifications ul { list-style-type: none; padding: 0; margin: 0; }
+        footer { text-align: center; padding: 20px; background-color: #34495e; color: white; margin-top: 30px; }
+        /* Placeholder for modal - Angular will handle this better */
+        .modal { display: none; /* Hidden by default */ position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .close-button:hover, .close-button:focus { color: black; text-decoration: none; cursor: pointer; }
+    </style>
 </head>
-<body class="mat-typography">
-  <app-root></app-root>
+<body>
+
+    <header>
+        <h1>FreeWorks</h1>
+        <nav>
+            <ul>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#projects">Proyectos</a></li>
+                <li><a href="#notifications-area">Notificaciones (<span id="notif-count">1</span>)</a></li>
+                <li><a href="#profile">Mi Perfil</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div id="notifications-area" class="notifications" style="display: none;"> <strong>Notificaciones</strong>
+        <ul>
+            <li>Entrega "Diseño UI" del proyecto "Plataforma E-commerce" está atrasada.</li>
+            </ul>
+    </div>
+
+    <div class="container">
+        <section id="dashboard-summary" class="dashboard-summary">
+            <h2>Resumen del Tablero</h2>
+            <p>Proyectos Activos: <span id="sum-active">3</span></p>
+            <p>Proyectos Pendientes: <span id="sum-pending">1</span></p>
+            <p>Proyectos Entregados: <span id="sum-delivered">5</span></p>
+            <p>Entregas Atrasadas: <span id="sum-overdue">1</span></p>
+        </section>
+
+        <section id="filters-search" class="filters-search">
+            <h2>Filtros y Búsqueda</h2>
+            <input type="search" id="search-project" placeholder="Buscar por nombre de proyecto o entregable...">
+            <label for="filter-client">Cliente:</label>
+            <select id="filter-client">
+                <option value="">Todos</option>
+                <option value="cliente1">Cliente Alfa</option>
+                <option value="cliente2">Cliente Beta</option>
+            </select>
+            <label for="filter-status">Estado:</label>
+            <select id="filter-status">
+                <option value="">Todos</option>
+                <option value="activo">Activo</option>
+                <option value="entregado">Entregado</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="atrasado">Atrasado</option>
+            </select>
+            <label for="filter-priority">Prioridad:</label>
+            <select id="filter-priority">
+                <option value="">Todas</option>
+                <option value="alta">Alta</option>
+                <option value="media">Media</option>
+                <option value="baja">Baja</option>
+            </select>
+            <button onclick="applyFilters()">Aplicar Filtros</button> </section>
+
+        <section id="projects-section">
+            <div class="project-tabs">
+                <button class="active" onclick="showTab('activos')">Proyectos Activos</button>
+                <button onclick="showTab('entregados')">Proyectos Entregados</button>
+                <button onclick="showTab('pendientes')">Proyectos Pendientes</button>
+            </div>
+
+            <div id="project-list-activos" class="project-list">
+                <article class="project-card">
+                    <h3>Proyecto "Plataforma E-commerce" (Activo)</h3>
+                    <p>Cliente: Cliente Alfa</p>
+                    <p>Prioridad: Alta</p>
+                    <p>Estado: <span class="status status-en-progreso">En Progreso</span></p>
+                    <p>Progreso: <progress value="70" max="100"></progress> 70%</p>
+
+                    <div class="deliverables">
+                        <h4>Entregables:</h4>
+                        <ul>
+                            <li>Diseño UI (2025-05-10) - Maquetas de alta fidelidad. [ArchivoSimulado.pdf]</li>
+                            <li>Desarrollo Frontend (2025-05-20) - Componentes base. [No adjunto]</li>
+                        </ul>
+                        <button onclick="openAddDeliverableModal('proyecto1')">Agregar Entregable</button>
+                    </div>
+
+                    <div class="comments">
+                        <h4>Comentarios del Cliente:</h4>
+                        <ul>
+                            <li>"Me gusta el avance, revisar colores." - Cliente Alfa (2025-05-02)</li>
+                        </ul>
+                        <div class="add-comment-form">
+                            <textarea placeholder="Escribir comentario del cliente..."></textarea>
+                            <button>Registrar Comentario</button>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <label for="change-status-proj1">Cambiar Estado:</label>
+                        <select id="change-status-proj1">
+                            <option value="en-progreso" selected>En Progreso</option>
+                            <option value="finalizado">Finalizado</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="atrasado">Atrasado</option>
+                        </select>
+                        <button>Actualizar</button>
+                    </div>
+                </article>
+
+                <article class="project-card">
+                    <h3>Proyecto "App Móvil Fitness" (Activo)</h3>
+                    <p>Cliente: Cliente Beta</p>
+                    <p>Prioridad: Media</p>
+                    <p>Estado: <span class="status status-en-progreso">En Progreso</span></p>
+                    <p>Progreso: <progress value="30" max="100"></progress> 30%</p>
+                    <div class="deliverables">
+                        <h4>Entregables:</h4>
+                        <ul>
+                            <li>Wireframes (2025-05-15) - Bocetos iniciales. [Wireframes.zip]</li>
+                        </ul>
+                         <button onclick="openAddDeliverableModal('proyecto2')">Agregar Entregable</button>
+                    </div>
+                    <div class="comments">
+                        <h4>Comentarios del Cliente:</h4>
+                        <ul>
+                            <li>"Aprobados los wireframes." - Cliente Beta (2025-05-05)</li>
+                        </ul>
+                        <div class="add-comment-form">
+                            <textarea placeholder="Escribir comentario del cliente..."></textarea>
+                            <button>Registrar Comentario</button>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <label for="change-status-proj2">Cambiar Estado:</label>
+                        <select id="change-status-proj2">
+                            <option value="en-progreso" selected>En Progreso</option>
+                            <option value="finalizado">Finalizado</option>
+                        </select>
+                        <button>Actualizar</button>
+                    </div>
+                </article>
+                </div>
+
+            <div id="project-list-entregados" class="project-list" style="display:none;">
+                <article class="project-card">
+                    <h3>Proyecto "Landing Page Evento" (Entregado)</h3>
+                    <p>Cliente: Cliente Gamma</p>
+                    <p>Prioridad: Baja</p>
+                    <p>Estado: <span class="status status-finalizado">Finalizado</span></p>
+                    <p>Progreso: <progress value="100" max="100"></progress> 100%</p>
+                    <div class="deliverables">
+                        <h4>Entregables:</h4>
+                        <ul>
+                            <li>Diseño Final (2025-04-10) [Diseño.jpg]</li>
+                            <li>Desarrollo y Despliegue (2025-04-20) [URL_Despliegue.txt]</li>
+                        </ul>
+                    </div>
+                     <div class="comments">
+                        <h4>Comentarios del Cliente:</h4>
+                        <ul>
+                            <li>"¡Excelente trabajo, todo perfecto!" - Cliente Gamma (2025-04-22)</li>
+                        </ul>
+                    </div>
+                </article>
+            </div>
+
+            <div id="project-list-pendientes" class="project-list" style="display:none;">
+                 <article class="project-card">
+                    <h3>Proyecto "Consultoría SEO" (Pendiente)</h3>
+                    <p>Cliente: Cliente Delta</p>
+                    <p>Prioridad: Media</p>
+                    <p>Estado: <span class="status">Pendiente de Inicio</span></p>
+                    <p>Progreso: <progress value="0" max="100"></progress> 0%</p>
+                     <div class="comments">
+                        <h4>Comentarios del Cliente:</h4>
+                        <ul>
+                            <li>"Esperando propuesta detallada para iniciar." - Cliente Delta (2025-05-01)</li>
+                        </ul>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+    </div> <div id="addDeliverableModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeAddDeliverableModal()">&times;</span>
+            <h2>Agregar Nuevo Entregable</h2>
+            <form id="form-add-deliverable">
+                <input type="hidden" id="projectIdForDeliverable" value="">
+                <div>
+                    <label for="deliverable-date">Fecha de Entrega:</label>
+                    <input type="date" id="deliverable-date" required>
+                </div>
+                <div>
+                    <label for="deliverable-desc">Descripción:</label>
+                    <textarea id="deliverable-desc" rows="3" required></textarea>
+                </div>
+                <div>
+                    <label for="deliverable-file">Archivo (simulado):</label>
+                    <input type="file" id="deliverable-file">
+                </div>
+                <button type="submit">Guardar Entregable</button>
+            </form>
+        </div>
+    </div>
+
+
+    <footer>
+        <p>&copy; 2025 FreeWorks MVP. Todos los derechos reservados.</p>
+        <p>Desarrollado con fines de demostración para Angular, Git y Docker.</p>
+    </footer>
+
+    <script>
+        // JavaScript muy básico para simular tabs y modal (Angular se encargará de esto de forma más robusta)
+        function showTab(tabName) {
+            const lists = document.querySelectorAll('.project-list');
+            lists.forEach(list => list.style.display = 'none');
+            document.getElementById('project-list-' + tabName).style.display = 'grid';
+
+            const buttons = document.querySelectorAll('.project-tabs button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        // Simulación de filtros (Angular lo hará con data binding y servicios)
+        function applyFilters() {
+            const search = document.getElementById('search-project').value.toLowerCase();
+            const client = document.getElementById('filter-client').value;
+            const status = document.getElementById('filter-status').value;
+            const priority = document.getElementById('filter-priority').value;
+            console.log("Filtrando por:", { search, client, status, priority });
+            alert("Funcionalidad de filtrado y búsqueda será implementada con Angular.\nValores actuales: " + JSON.stringify({ search, client, status, priority }));
+            // Aquí iría la lógica de Angular para filtrar los datos mostrados
+        }
+
+        const modal = document.getElementById('addDeliverableModal');
+        function openAddDeliverableModal(projectId) {
+            document.getElementById('projectIdForDeliverable').value = projectId;
+            modal.style.display = "block";
+        }
+        function closeAddDeliverableModal() {
+            modal.style.display = "none";
+        }
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+        document.getElementById('form-add-deliverable').onsubmit = function(event) {
+            event.preventDefault();
+            const projectId = document.getElementById('projectIdForDeliverable').value;
+            const date = document.getElementById('deliverable-date').value;
+            const desc = document.getElementById('deliverable-desc').value;
+            const file = document.getElementById('deliverable-file').files.length > 0 ? document.getElementById('deliverable-file').files[0].name : "Ninguno";
+            alert(`Entregable agregado (simulado) al proyecto ${projectId}:\nFecha: ${date}\nDescripción: ${desc}\nArchivo: ${file}`);
+            // Aquí Angular enviaría los datos a la API REST
+            closeAddDeliverableModal();
+            this.reset();
+        }
+
+        // Simular conteo de notificaciones
+        // En una app real, esto vendría de un servicio
+        // document.getElementById('notif-count').textContent = '1'; // Ejemplo
+        // 10. Mostrar notificaciones por entregas atrasadas.
+        // El área de notificaciones ya está en el HTML, Angular la poblaría.
+        // Por ejemplo, si hay entregas atrasadas, mostrar el div 'notifications'
+        // y llenar su contenido.
+
+    </script>
+
 </body>
 </html>
